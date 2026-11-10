@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<cartridge region='NTSC'>
+  <xband>
+    <rom>
+      <map mode='direct' address='00-3f:8000-ffff'/>
+      <map mode='direct' address='80-bf:8000-ffff'/>
+      <map mode='direct' address='40-7d:0000-ffff'/>
+      <map mode='direct' address='c0-df:0000-ffff'/>
+    </rom>
+    <ram size='10000'>
+      <map mode='linear' address='e0-e0:0000-ffff'/>
+    </ram>
+    <mmio>
+      <map mode='direct' address='e0-ff:0000-ffff'/>
+    </mmio>
+  </xband>
+</cartridge>

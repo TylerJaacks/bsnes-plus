@@ -22,7 +22,7 @@ objdir := obj/$(profile)
 # compiler
 c       := $(compiler) -xc -std=gnu99
 cpp     := $(compiler) -std=gnu++0x
-flags   := -I. -I$(common) -I$(snes) -I/home/eggs/security/src/snes/qt-build/qtbase/include/QtCore -I/home/eggs/security/src/snes/qt-build/qtbase/include/QtGui -I/home/eggs/security/src/snes/qt-build/qtbase/include/QtWidgets
+flags   := -I. -I$(common) -I$(snes)
 link    :=
 objects :=
 
@@ -64,7 +64,7 @@ else ifeq ($(platform),osx)
 else ifeq ($(platform),$(filter $(platform),win msys))
   link += -mwindows
 # link += -mconsole
-  link += -mthreads -luuid -lkernel32 -luser32 -lgdi32 -lcomctl32 -lcomdlg32 -lshell32 -lole32
+  link += -mthreads -lws2_32 -luuid -lkernel32 -luser32 -lgdi32 -lcomctl32 -lcomdlg32 -lshell32 -lole32
   link += -Wl,-enable-stdcall-fixup -Wl,-enable-auto-import -Wl,-enable-runtime-pseudo-reloc
 else
   unknown_platform: help;

@@ -1,25 +1,26 @@
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <netinet/in.h>
-#include <netdb.h>
+// system/socket headers live at the top of snes.hpp (this file is included inside namespace SNES)
 
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <fcntl.h>
-
-#include <string.h>
-#include <stdlib.h>
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <errno.h>
+#if defined(_WIN32)
+  typedef SOCKET xband_socket_t;
+  #define XBAND_INVALID_SOCKET INVALID_SOCKET
+  static inline bool xband_net_init() {
+    static bool ok = false;
+    if(!ok) { WSADATA wsa; ok = WSAStartup(MAKEWORD(2, 2), &wsa) == 0; }
+    return ok;
+  }
+  static inline int  xband_sock_send(xband_socket_t s, const void *b, size_t n) { return ::send(s, (const char*)b, (int)n, 0); }
+  static inline int  xband_sock_recv(xband_socket_t s, void *b, size_t n) { return ::recv(s, (char*)b, (int)n, 0); }
+  static inline void xband_sock_close(xband_socket_t s) { ::closesocket(s); }
+  static inline void xband_sock_nonblock(xband_socket_t s) { u_long on = 1; ::ioctlsocket(s, FIONBIO, &on); }
+#else
+  typedef int xband_socket_t;
+  #define XBAND_INVALID_SOCKET (-1)
+  static inline bool xband_net_init() { return true; }
+  static inline int  xband_sock_send(xband_socket_t s, const void *b, size_t n) { return (int)::send(s, b, n, 0); }
+  static inline int  xband_sock_recv(xband_socket_t s, void *b, size_t n) { return (int)::recv(s, b, n, 0); }
+  static inline void xband_sock_close(xband_socket_t s) { ::close(s); }
+  static inline void xband_sock_nonblock(xband_socket_t s) { ::fcntl(s, F_SETFL, ::fcntl(s, F_GETFL, 0) | O_NONBLOCK); }
+#endif
 
 #define XBAND_REGS 0xE0
 
@@ -67,7 +68,7 @@ public:
     uint8_t kill;
     uint8_t control;
     struct sockaddr_in server;
-    int conn;
+    xband_socket_t conn;
     uint8_t modem_line_relay;
     uint8_t modem_regs[0x20];
     uint8_t modem_set_ATV25;

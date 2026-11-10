@@ -179,10 +179,10 @@ void XBANDBase::debug_modem_registers() {
 
 void XBANDBase::xband_send_identity() {
 	char hdr1[1024] = "///////EMU-";
-	char *id = "Waj04qaASNfmaRNw";
+	const char *id = "Waj04qaASNfmaRNw";
 	strcat(hdr1, id);
 	strcat(hdr1, "\x0a");
-	::write(x->conn, &hdr1, strlen(hdr1));
+	xband_sock_send(x->conn, hdr1, strlen(hdr1));
   fprintf(stderr, "[+][modem] Identity Sent %s\n", hdr1);
 	x->net_step = 2;
 }
@@ -228,12 +228,12 @@ uint8 XBANDBase::read(unsigned addr) {
 		}
 		if (reg == 0x98) { //kreadmstatus2
 			if (x->net_step) {
-				ssize_t ret = ::read(x->conn, &x->rxbuf[x->rxbufpos], sizeof(x->rxbuf) - x->rxbufpos);
+				int ret = xband_sock_recv(x->conn, &x->rxbuf[x->rxbufpos], sizeof(x->rxbuf) - x->rxbufpos);
 				
 				if (ret != -1 && ret != 0) {
 					if (x->net_step == 1) {
 						xband_send_identity();
-						::write(x->conn, x->txbuf, x->txbufpos);
+						xband_sock_send(x->conn, x->txbuf, x->txbufpos);
 						x->txbufpos = 0;
 					}
 
@@ -351,7 +351,7 @@ void XBANDBase::write(unsigned addr, uint8 data) {
 		if (x->net_step == 2) {
 			//debug_modem_registers();
 			fprintf(stderr, "[+][modem] FRED FIFO write | net_step == 2 | data: %x\n", data);
-			::write(x->conn, &data, 1);
+			xband_sock_send(x->conn, &data, 1);
 		} else if (x->net_step == 1) {
 			fprintf(stderr, "[+][modem] FRED FIFO write | net_step == 1 | data: %x\n", data);
 			x->txbuf[x->txbufpos++] = data;
@@ -368,12 +368,16 @@ void XBANDBase::write(unsigned addr, uint8 data) {
 			fprintf(stderr, "[*]RTS was set, restarting connection | net_step == %d\n", x->net_step);
 			struct addrinfo hints;
 			struct addrinfo *res = NULL;
-			char *addr = "16bit.retrocomputing.network";
-			char *port = "56969";
+			const char *addr = "16bit.retrocomputing.network";
+			const char *port = "56969";
 			printf("connecting to %s:%s...\n", addr, port);
 			memset(&hints, 0, sizeof(hints));
 			hints.ai_family = AF_INET;
 			hints.ai_socktype = SOCK_STREAM;
+			if (!xband_net_init()) {
+				fprintf(stderr, "error 0 - WSAStartup failed\n");
+				return;
+			}
 			int err = getaddrinfo(addr, port, &hints, &res);
 			if (err != 0) {
 				fprintf(stderr, "error 3 - %d\n", err);
@@ -381,18 +385,21 @@ void XBANDBase::write(unsigned addr, uint8 data) {
 			}
 
 			x->conn = socket(AF_INET, SOCK_STREAM, 0);
-			if (x->conn == NULL) {
+			if (x->conn == XBAND_INVALID_SOCKET) {
 				fprintf(stderr, "error 1\n");
+				freeaddrinfo(res);
 				return;
 			}
 
 			err = connect(x->conn, res->ai_addr, res->ai_addrlen);
 			if (err != 0) {
 				fprintf(stderr, "error 2 - %d\n", err);
+				xband_sock_close(x->conn);
+				freeaddrinfo(res);
 				return;
 			}
 
-			fcntl(x->conn, F_SETFL, O_NONBLOCK);
+			xband_sock_nonblock(x->conn);
 			freeaddrinfo(res);
 			x->net_step = 1;
 		}
@@ -406,7 +413,7 @@ void XBANDBase::write(unsigned addr, uint8 data) {
 				x->modem_line_relay = data & 0b10;
 				if (x->modem_line_relay == 0 && x->net_step) {
 					fprintf(stderr, "[-]Box hung up, killing connection\n");
-					close(x->conn);
+					xband_sock_close(x->conn);
 					x->net_step = 0;
 					x->txbufpos = 0;
 					x->rxbufpos = x->rxbufused = 0;

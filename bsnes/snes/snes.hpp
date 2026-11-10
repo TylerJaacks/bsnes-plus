@@ -1,3 +1,19 @@
+// XBAND modem networking. Included here (outside namespace SNES, and on Windows
+// before anything pulls in windows.h/winsock.h) because chip headers are
+// included inside the SNES namespace.
+#if defined(_WIN32)
+  #include <winsock2.h>
+  #include <ws2tcpip.h>
+#else
+  #include <sys/types.h>
+  #include <sys/socket.h>
+  #include <arpa/inet.h>
+  #include <netinet/in.h>
+  #include <netdb.h>
+  #include <unistd.h>
+  #include <fcntl.h>
+#endif
+
 namespace SNES {
   namespace Info {
     static const char Name[] = "bsnes-plus";

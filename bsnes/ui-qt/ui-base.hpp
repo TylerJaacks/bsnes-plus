@@ -4,6 +4,11 @@
 #define QT_THREAD_SUPPORT
 #endif
 
+#if defined(_WIN32)
+  #include <winsock2.h>  // before Qt pulls in windows.h (XBAND networking)
+  #include <ws2tcpip.h>
+#endif
+
 #include <QApplication>
 #include <QtWidgets>
 //Q_IMPORT_PLUGIN(QJpegPlugin)

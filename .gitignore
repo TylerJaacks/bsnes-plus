@@ -11,4 +11,6 @@
 *.rar
 */out
 */bin
+bsnes/out/*
+release/*
 notes
